@@ -17,8 +17,6 @@ public class Board {
     private int hamming = -1;
     private int manhattan = -1;
 
-    // create a board from an n-by-n array of tiles,
-    // where tiles[row][col] = tile at (row, col)
     public Board(int[][] tiles) {
         if (null == tiles) {
             throw new IllegalArgumentException();
@@ -33,7 +31,7 @@ public class Board {
             if (i != firstLineIndex && i != secondLineIndex) {
                 array[i] = original.array[i];
             } else {
-                // only in case of changed rows we should create new arrays rahter than just copy the old ones
+                // only in case of changed rows we should create new arrays rather than just copy the old ones
                 array[i] = new int[array.length];
                 for (int j = 0; j < array.length; j++) {
                     array[i][j] = original.array[i][j];
@@ -46,7 +44,6 @@ public class Board {
         }
     }
 
-    // string representation of this board
     public String toString() {
         StringBuilder builder = new StringBuilder();
         builder.append(n);
@@ -60,12 +57,10 @@ public class Board {
         return builder.toString();
     }
 
-    // board dimension n
     public int dimension() {
         return n;
     }
 
-    // number of tiles out of place
     public int hamming() {
         if (-1 != hamming) {
             // already calculated
@@ -82,7 +77,6 @@ public class Board {
         return hamming;
     }
 
-    // sum of Manhattan distances between tiles and goal
     public int manhattan() {
         if (-1 != manhattan) {
             // already calculated
@@ -91,17 +85,22 @@ public class Board {
         int currentManhattan = 0;
         for (int i = 0; i < n; i++) {
             for (int j = 0; j < n; j++) {
-                if (EMPTY_TILE_VALUE != array[i][j]) {
-                    int[] expectedPosition = getExpectedPosition(array[i][j]);
-                    currentManhattan += Math.abs(i - expectedPosition[0]) + Math.abs(j - expectedPosition[1]);
-                }
+                currentManhattan += manhattanForTile(i, j);
             }
         }
         manhattan = currentManhattan;
         return manhattan;
     }
 
-    // is this board the goal board?
+    private int manhattanForTile(int i, int j) {
+        int currentManhattan = 0;
+        if (EMPTY_TILE_VALUE != array[i][j]) {
+            int[] expectedPosition = getExpectedPosition(array[i][j]);
+            currentManhattan = Math.abs(i - expectedPosition[0]) + Math.abs(j - expectedPosition[1]);
+        }
+        return currentManhattan;
+    }
+
     public boolean isGoal() {
         return 0 == manhattan();
     }
@@ -120,29 +119,27 @@ public class Board {
                 Arrays.deepEquals(array, board.array);
     }
 
-    // all neighboring boards
     public Iterable<Board> neighbors() {
         if (null == zeroPosition) {
             findZeroPosition();
         }
-        List<int[]> positions = new ArrayList<>();
-        positions.add(new int[] {zeroPosition[0] - 1, zeroPosition[1]});
-        positions.add(new int[] {zeroPosition[0] + 1, zeroPosition[1]});
-        positions.add(new int[] {zeroPosition[0], zeroPosition[1] - 1});
-        positions.add(new int[] {zeroPosition[0], zeroPosition[1] + 1});
+        List<int[]> movedZeroPositions = new ArrayList<>();
+        movedZeroPositions.add(new int[] {zeroPosition[0] - 1, zeroPosition[1]});
+        movedZeroPositions.add(new int[] {zeroPosition[0] + 1, zeroPosition[1]});
+        movedZeroPositions.add(new int[] {zeroPosition[0], zeroPosition[1] - 1});
+        movedZeroPositions.add(new int[] {zeroPosition[0], zeroPosition[1] + 1});
 
         List<Board> neighbours = new ArrayList<>();
-        for (int[] position : positions) {
-            if (validatePosition(position)) {
-                Board nextBoard = swap(this, zeroPosition, position);
-                nextBoard.zeroPosition = position;
+        for (int[] movedZeroPosition : movedZeroPositions) {
+            if (validatePosition(movedZeroPosition)) {
+                Board nextBoard = swap(this, zeroPosition, movedZeroPosition);
+                nextBoard.zeroPosition = movedZeroPosition;
                 neighbours.add(nextBoard);
             }
         }
         return neighbours;
     }
 
-    // a board that is obtained by exchanging any pair of tiles
     public Board twin() {
         findZeroPosition();
         int randomValue = 0;
@@ -156,24 +153,6 @@ public class Board {
                 || Arrays.equals(zeroPosition, updatedPosition)
                 || Arrays.equals(zeroPosition, randomPosition));
         return swap(this, randomPosition, updatedPosition);
-    }
-
-    // unit testing (not graded)
-    public static void main(String[] args) {
-        int[][] testArray = {{8, 1, 3}, {4, 0, 2}, {7, 6, 5}};
-        Board testBoard = new Board(testArray);
-        System.out.println(testBoard.hamming());
-        System.out.println(testBoard.manhattan());
-
-        int[][] testArray2 = {{1, 0, 3}, {4, 2, 5}, {7, 8, 6}};
-        Board testBoard2 = new Board(testArray2);
-        System.out.println(testBoard2);
-
-        System.out.println("////////////////////////");
-
-        for (Board neighbour : testBoard2.neighbors()) {
-            System.out.println(neighbour);
-        }
     }
 
     private int getExpectedValue(int i, int j) {
@@ -205,11 +184,18 @@ public class Board {
         return position[0] >= 0 && position[0] < n && position[1] >= 0 && position[1] < n;
     }
 
-    private Board swap(Board original, int[] first, int[] second) {
-        Board copy = new Board(original, first[0], second[0]);
-        int temp = copy.array[first[0]][first[1]];
-        copy.array[first[0]][first[1]] = copy.array[second[0]][second[1]];
-        copy.array[second[0]][second[1]] = temp;
+    private Board swap(Board original, int[] thisZeroPosition, int[] nextZeroPosition) {
+        Board copy = new Board(original, thisZeroPosition[0], nextZeroPosition[0]);
+        int temp = copy.array[thisZeroPosition[0]][thisZeroPosition[1]];
+        copy.array[thisZeroPosition[0]][thisZeroPosition[1]] = copy.array[nextZeroPosition[0]][nextZeroPosition[1]];
+        copy.array[nextZeroPosition[0]][nextZeroPosition[1]] = temp;
+
+        if (-1 != manhattan) {
+            // Manhattan metrics of the copy can be different only in the tile, which is moved
+            copy.manhattan = this.manhattan
+                    - manhattanForTile(nextZeroPosition[0], nextZeroPosition[1])
+                    + copy.manhattanForTile(thisZeroPosition[0], nextZeroPosition[1]);
+        }
         return copy;
     }
 
