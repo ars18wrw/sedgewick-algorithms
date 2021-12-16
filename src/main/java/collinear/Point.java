@@ -1,7 +1,7 @@
 package collinear;
 
-import java.util.Comparator;
 import edu.princeton.cs.algs4.StdDraw;
+import java.util.Comparator;
 
 public class Point implements Comparable<Point> {
 
@@ -97,7 +97,6 @@ public class Point implements Comparable<Point> {
             }
         };
     }
-
 
     /**
      * Returns a string representation of this point.
