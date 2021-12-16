@@ -6,6 +6,10 @@ public class Percolation {
     private static final int TOP = 0;
 
     private final WeightedQuickUnionUF quickUnionImpl;
+
+    // this UF is used to handle backwash cases, when water flows from the virtual bottom backwards, i.e. up
+    private final WeightedQuickUnionUF quickUnionImplWithoutBottom;
+
     private final int size;
     private final int bottom;
 
@@ -20,10 +24,12 @@ public class Percolation {
         size = n;
         bottom = size * size + 1;
         quickUnionImpl = new WeightedQuickUnionUF(n * n + 2);
+        quickUnionImplWithoutBottom = new WeightedQuickUnionUF(n * n + 1);
 
         // connect the first row with top
         for (int i = 1; i <= size; i++) {
             quickUnionImpl.union(TOP, i);
+            quickUnionImplWithoutBottom.union(TOP, i);
         }
 
         // connect the last row with bottom
@@ -39,6 +45,7 @@ public class Percolation {
         validateIndex(row);
         validateIndex(col);
 
+        // open site unless it is already opened
         if (!grid[row - 1][col - 1]) {
             grid[row - 1][col - 1] = true;
             openSitesCount++;
@@ -46,21 +53,25 @@ public class Percolation {
             // top
             if (row > 1 && grid[row - 2][col - 1]) {
                 quickUnionImpl.union(getSiteIndex(row, col), getSiteIndex(row - 1, col));
+                quickUnionImplWithoutBottom.union(getSiteIndex(row, col), getSiteIndex(row - 1, col));
             }
 
             // right
             if (col < size && grid[row - 1][col]) {
                 quickUnionImpl.union(getSiteIndex(row, col), getSiteIndex(row, col + 1));
+                quickUnionImplWithoutBottom.union(getSiteIndex(row, col), getSiteIndex(row, col + 1));
             }
 
             // bottom
             if (row < size && grid[row][col - 1]) {
                 quickUnionImpl.union(getSiteIndex(row, col), getSiteIndex(row + 1, col));
+                quickUnionImplWithoutBottom.union(getSiteIndex(row, col), getSiteIndex(row + 1, col));
             }
 
             // left
             if (col > 1 && grid[row - 1][col - 2]) {
                 quickUnionImpl.union(getSiteIndex(row, col), getSiteIndex(row, col - 1));
+                quickUnionImplWithoutBottom.union(getSiteIndex(row, col), getSiteIndex(row, col - 1));
             }
         }
     }
@@ -77,7 +88,7 @@ public class Percolation {
         validateIndex(row);
         validateIndex(col);
         return isOpen(row, col) &&
-                quickUnionImpl.find(TOP) == quickUnionImpl.find(getSiteIndex(row, col));
+                quickUnionImplWithoutBottom.find(TOP) == quickUnionImplWithoutBottom.find(getSiteIndex(row, col));
     }
 
     // returns the number of open sites
